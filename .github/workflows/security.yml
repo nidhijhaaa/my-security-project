@@ -20,7 +20,9 @@ jobs:
         run: npm ci
 
       - name: Run Dependabot SCA scan
-        uses: actions/dependency-review-action@v3 # This will now ONLY run on PRs and will work perfectly.
+        # ONLY run this step if the event is a pull_request
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v3
 
   codeql-sast-scan:
     runs-on: ubuntu-latest
