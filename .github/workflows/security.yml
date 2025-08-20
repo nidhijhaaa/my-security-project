@@ -1,71 +1,41 @@
-name: Security Scans # A friendly name for your pipeline
+name: Security Scanning (SAST & SCA)
 
-# WHEN should this pipeline run?
-# 1. On a PUSH to the main branch (e.g., when someone directly updates code)
-# 2. On a PULL REQUEST to the main branch (MOST IMPORTANT: checks code before merging)
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
-# The JOBS (scanners) to run. They can run at the same time.
 jobs:
-
-  # JOB 1: DEPENDENCY SCANNER (SCA - Software Composition Analysis)
-  # Name: "Dependency Check"
-  dependency-check:
-    runs-on: ubuntu-latest # Run this job on a fresh Linux machine
-
-    # The STEPS for this job (tasks to execute in order)
+  dependency-scan:
+    runs-on: ubuntu-latest
     steps:
-      # Step 1: Get the code from GitHub
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js to understand our project
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # Step 3: Install the dependencies (express, lodash)
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      # Step 4: RUN THE SCANNER!
-      # This uses GitHub's official "Dependency Review" tool.
-      # It checks the newly proposed dependencies for known vulnerabilities.
-      # If it finds a CRITICAL one, it will FAIL this job and block the code from merging.
-      - name: Review dependencies for vulnerabilities
-        uses: actions/dependency-review-action@v3
+      - name: Run Dependabot SCA scan
+        uses: actions/dependency-review-action@v3 # This will now ONLY run on PRs and will work perfectly.
 
-  # JOB 2: SOURCE CODE SCANNER (SAST - Static Application Security Testing)
-  # Name: "CodeQL Analysis"
-  codeql-analysis:
-    runs-on: ubuntu-latest # Also run on a fresh Linux machine
-    # Give this job special permission to write security results
+  codeql-sast-scan:
+    runs-on: ubuntu-latest
     permissions:
       security-events: write
       actions: read
       contents: read
-
     steps:
-      # Step 1: Get the code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: INITIALIZE the CodeQL scanner.
-      # It automatically detects the language (JavaScript) in your repo.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
 
-      # Step 3: CodeQL tries to build the project to understand it better.
-      - name: Perform CodeQL Autobuild
-        uses: github/codeql-action/autobuild@v2
-
-      # Step 4: RUN THE SCANNER!
-      # CodeQL analyzes the code for hundreds of bug and vulnerability patterns.
-      # It uploads the results to the "Security" tab of your repository.
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
